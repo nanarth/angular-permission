@@ -69,11 +69,18 @@
       function resolveFunctionRedirect(redirectFunction, permission) {
         return $q
           .when(redirectFunction.call(null, permission))
-          .then(function (redirectState) {
-            if (!angular.isString(redirectState)) {
-              throw new TypeError('When used "redirectTo" as function, returned value must be string with state name');
+          .then(function (redirectParam) {
+            if (angular.isString(redirectParam)) {
+              return parseStateRef(redirectParam);
             }
-            return parseStateRef(redirectState);
+
+            if(angular.isObject) {
+              checkRedirectParam(redirectParam);
+              return $q.resolve(redirectParam);
+            }
+
+            throw new TypeError('When used "redirectTo" as function, returned value must be either a string with ' +
+              'a state name or a state transition object');
           });
       }
 
@@ -102,6 +109,36 @@
 
         if (angular.isString(redirectState)) {
           return $q.resolve(parseStateRef(redirectState));
+        }
+
+        if(angular.isObject(redirectState)) {
+          checkRedirectParam(redirectState);
+          return $q.resolve(redirectState);
+        }
+      }
+
+      /**
+       * Check that redirectParam is of format {{to: String, params: (Object|null), options: (Object| null)}}. If not
+       * throws the according error.
+       * @private
+       *
+       * @param redirectParam
+       */
+      function checkRedirectParam(redirectParam) {
+        function isObjectOrNullOrUndefined(value) {
+          return angular.isUndefined(value) || value === null || angular.isObject(value);
+        }
+
+        if(!angular.isString(redirectParam.to)) {
+          throw new TypeError('When returning a redirectionObject in "redictedTo ", property "to" must be a string');
+        }
+
+        if(!isObjectOrNullOrUndefined(redirectParam.params)) {
+          throw new TypeError('When returning a redirectionObject in "redictedTo ", property "params" must be an object, null, or undefined');
+        }
+
+        if(!isObjectOrNullOrUndefined(redirectParam.options)) {
+          throw new TypeError('When returning a redirectionObject in "redictedTo ", property "options" must be an object, null, or undefined');
         }
       }
 
